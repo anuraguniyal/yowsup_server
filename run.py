@@ -81,6 +81,7 @@ if __name__==  "__main__":
 
     # start http api server for sending messages
     if 1:
+        logging.info("Starting server on port %s"%port)
         server = ThreadedHTTPServer(('0.0.0.0', port), ApiRequestHandler)
         server_thread = threading.Thread(target=server.serve_forever)
         server_thread.daemon = True
