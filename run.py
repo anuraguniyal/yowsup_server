@@ -23,6 +23,7 @@ import threading
 import logging
 import json
 import urllib2
+import time
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
 
@@ -78,15 +79,26 @@ class ApiRequestHandler(BaseHTTPRequestHandler):
 class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
     pass
 
-def ping_app(app_name):
-    try:
-        url ='http://%s.herokuapp.com'%app_name
-        logging.info("pinging app @ %s"%url)
-        response = urllib2.urlopen(url)
-        html = response.read()
-        logging.info("app returned: %s"%html)
-    except Exception,e:
-        logging.error(e)
+class AppPinger(threading.Thread):
+    def __init__(self, delay, app_name):
+        threading.Thread.__init__(self)
+        self.app_name = app_name
+        self.delay = delay
+
+    def run(self):
+        while True:
+            time.sleep(self.delay)
+            self.ping_app()
+
+    def ping_app(self):
+        try:
+            url ='http://%s.herokuapp.com'%self.app_name
+            logging.info("pinging app @ %s"%url)
+            response = urllib2.urlopen(url)
+            html = response.read()
+            logging.info("app returned: %s"%html)
+        except Exception,e:
+            logging.error(e)
 
 if __name__==  "__main__":
     logging.info("command args %s"%sys.argv)
@@ -109,8 +121,8 @@ if __name__==  "__main__":
     server_thread.start()
 
     # start a Timer to ping every minute so heroku keeps our dyno alive
-    timer = threading.Timer(60, ping_app, args=[app_name])
-    timer.start()
+    pinger = AppPinger(60, app_name)
+    pinger.start()
 
     # start yowsup loop
     while True:
