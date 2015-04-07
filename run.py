@@ -22,6 +22,7 @@ from SocketServer import ThreadingMixIn
 import threading
 import logging
 import json
+import urllib2
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
 
@@ -42,6 +43,12 @@ def connect_whatsapp(phone, password):
     return stack
 
 class ApiRequestHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-Type', 'text/html')
+        self.end_headers()
+        self.wfile.write("Working.")
+
     def do_POST(self):
         out = {}
         try:
@@ -55,8 +62,8 @@ class ApiRequestHandler(BaseHTTPRequestHandler):
             self.send_response(500)
 
         self.send_header('Content-Type', 'application/json')
-        self.wfile.write(json.dumps(out))
         self.end_headers()
+        self.wfile.write(json.dumps(out))
 
     def _do_POST(self):
         data_string = self.rfile.read(int(self.headers['Content-Length']))
@@ -71,21 +78,39 @@ class ApiRequestHandler(BaseHTTPRequestHandler):
 class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
     pass
 
+def ping_app(app_name):
+    try:
+        url ='http://%s.herokuapp.com'%app_name
+        logging.info("pinging app @ %s"%url)
+        response = urllib2.urlopen(url)
+        html = response.read()
+        logging.info("app returned: %s"%html)
+    except Exception,e:
+        logging.error(e)
+
 if __name__==  "__main__":
+    logging.info("command args %s"%sys.argv)
     phone = sys.argv[1]
     password = sys.argv[2]
     port = int(sys.argv[3])
+    try:
+        app_name = sys.argv[4]
+    except IndexError,e:
+        app_name = None
 
     global stack
     stack = connect_whatsapp(phone, password)
 
     # start http api server for sending messages
-    if 1:
-        logging.info("Starting server on port %s"%port)
-        server = ThreadedHTTPServer(('0.0.0.0', port), ApiRequestHandler)
-        server_thread = threading.Thread(target=server.serve_forever)
-        server_thread.daemon = True
-        server_thread.start()
+    logging.info("Starting server on port %s"%port)
+    server = ThreadedHTTPServer(('0.0.0.0', port), ApiRequestHandler)
+    server_thread = threading.Thread(target=server.serve_forever)
+    server_thread.daemon = True
+    server_thread.start()
+
+    # start a Timer to ping every minute so heroku keeps our dyno alive
+    timer = threading.Timer(60, ping_app, args=[app_name])
+    timer.start()
 
     # start yowsup loop
     while True:

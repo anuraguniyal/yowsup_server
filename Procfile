@@ -1,1 +1,1 @@
-worker: python run.py 16696663072 'AifNledFQg+w/W9gGSNtRI6Zc9o=' $PORT
+web: python run.py $WAPP_PHONE $WAPP_PASS $PORT $APP_NAME
