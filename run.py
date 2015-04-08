@@ -28,12 +28,17 @@ import time
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
 
 stack = None
-def connect_whatsapp(phone, password):
+def connect_whatsapp(phone, password, encryption):
     layers = (
         ServerLayer,
         (YowAuthenticationProtocolLayer, YowMessagesProtocolLayer, YowReceiptProtocolLayer, YowAckProtocolLayer, YowMediaProtocolLayer),
-        #YowAxolotlLayer,
-    ) + YOWSUP_CORE_LAYERS
+    )
+
+    if encryption:
+        logging.info("Adding encryption layer")
+        layers = layers + (YowAxolotlLayer,)
+
+    layers = layers + YOWSUP_CORE_LAYERS
 
     stack = YowStack(layers)
     stack.setProp(YowAuthenticationProtocolLayer.PROP_CREDENTIALS, (phone, password))         #setting credentials
@@ -105,13 +110,14 @@ if __name__==  "__main__":
     phone = sys.argv[1]
     password = sys.argv[2]
     port = int(sys.argv[3])
+    encryption = sys.argv[4]=='1'
     try:
-        app_name = sys.argv[4]
+        app_name = sys.argv[5]
     except IndexError,e:
         app_name = None
 
     global stack
-    stack = connect_whatsapp(phone, password)
+    stack = connect_whatsapp(phone, password, encryption)
 
     # start http api server for sending messages
     logging.info("Starting server on port %s"%port)
