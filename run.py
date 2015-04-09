@@ -37,6 +37,8 @@ def connect_whatsapp(phone, password, encryption):
     if encryption:
         logging.info("Adding encryption layer")
         layers = layers + (YowAxolotlLayer,)
+    else:
+        env.CURRENT_ENV = env.S40YowsupEnv()
 
     layers = layers + YOWSUP_CORE_LAYERS
 
