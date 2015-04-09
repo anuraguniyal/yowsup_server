@@ -3,6 +3,7 @@ from yowsup.layers.protocol_messages.protocolentities  import TextMessageProtoco
 from yowsup.layers.protocol_receipts.protocolentities  import OutgoingReceiptProtocolEntity
 from yowsup.layers.protocol_acks.protocolentities      import OutgoingAckProtocolEntity
 from yowsup.layers import YowLayerEvent
+from yowsup.layers.auth                        import YowAuthenticationProtocolLayer
 
 import logging
 import threading
@@ -35,6 +36,12 @@ class ServerLayer(YowInterfaceLayer):
     def onTextMessage(self, messageProtocolEntity):
         #send receipt otherwise we keep receiving the same message over and over
         logging.info("Text Message from %s: %s" % (messageProtocolEntity.getFrom(False), messageProtocolEntity.getBody() ))
+
+        jid = self.getProp(YowAuthenticationProtocolLayer.PROP_CREDENTIALS)[0]
+        if jid == messageProtocolEntity.getFrom(False):
+            logging.warn("Message from myself, ignoring!!!")
+            return
+
         msg = fortune.fortune()
         logging.info("replying with: %s"%msg)
         outgoingMessageProtocolEntity = TextMessageProtocolEntity(
