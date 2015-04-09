@@ -25,7 +25,7 @@ import json
 import urllib2
 import time
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s: %(message)s')
 
 stack = None
 def connect_whatsapp(phone, password, encryption):
