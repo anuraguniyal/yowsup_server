@@ -8,11 +8,24 @@ from yowsup.layers.auth                        import YowAuthenticationProtocolL
 import logging
 import threading
 import fortune
+import json
+import urllib2
+
+def post_message_to_url(messageProtocolEntity, reply_url):
+    logging.info("posting message to %s"%reply_url)
+    try:
+        req = urllib2.Request(reply_url)
+        req.add_header('Content-Type', 'application/json')
+        data = {'from': messageProtocolEntity.getFrom(False), 'message':  messageProtocolEntity.getBody() }
+        response = urllib2.urlopen(req, json.dumps(data))
+        logging.info("response %s"%response)
+    except Exception,e:
+        logging.error("Error: %s"%e)
 
 class ServerLayer(YowInterfaceLayer):
 
     PROP_MESSAGES = "org.openwhatsapp.yowsup.prop.messages.queue" #list of (jid, message) tuples
-
+    PROP_REPLY_URL = "org.openwhatsapp.yowsup.prop.reploy_url"
     EVENT_SEND_MESSAGE             = "org.openwhatsapp.yowsup.event.cli.send_message"
 
     lock = threading.Condition()
@@ -40,6 +53,11 @@ class ServerLayer(YowInterfaceLayer):
         jid = self.getProp(YowAuthenticationProtocolLayer.PROP_CREDENTIALS)[0]
         if jid == messageProtocolEntity.getFrom(False):
             logging.warn("Message from myself, ignoring!!!")
+            return
+
+        reply_url = self.getProp(self.__class__.PROP_REPLY_URL)
+        if reply_url is not None:
+            post_message_to_url(messageProtocolEntity, reply_url)
             return
 
         msg = fortune.fortune()

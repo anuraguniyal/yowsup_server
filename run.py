@@ -28,7 +28,7 @@ import time
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s: %(message)s')
 
 stack = None
-def connect_whatsapp(phone, password, encryption):
+def connect_whatsapp(phone, password, encryption, reply_url):
     layers = (
         ServerLayer,
         (YowAuthenticationProtocolLayer, YowMessagesProtocolLayer, YowReceiptProtocolLayer, YowAckProtocolLayer, YowMediaProtocolLayer),
@@ -47,7 +47,7 @@ def connect_whatsapp(phone, password, encryption):
     stack.setProp(YowNetworkLayer.PROP_ENDPOINT, YowConstants.ENDPOINTS[0])    #whatsapp server address
     stack.setProp(YowCoderLayer.PROP_DOMAIN, YowConstants.DOMAIN)
     stack.setProp(YowCoderLayer.PROP_RESOURCE, env.CURRENT_ENV.getResource())          #info about us as WhatsApp client
-
+    stack.setProp(ServerLayer.PROP_REPLY_URL, reply_url)
     return stack
 
 class ApiRequestHandler(BaseHTTPRequestHandler):
@@ -118,8 +118,13 @@ if __name__==  "__main__":
     except IndexError,e:
         app_name = None
 
+    try:
+        reply_url = sys.argv[6]
+    except IndexError,e:
+        reply_url = None
+
     global stack
-    stack = connect_whatsapp(phone, password, encryption)
+    stack = connect_whatsapp(phone, password, encryption, reply_url)
 
     # start http api server for sending messages
     logging.info("Starting server on port %s"%port)
