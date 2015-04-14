@@ -18,7 +18,7 @@ def post_message_to_url(messageProtocolEntity, reply_url):
         req.add_header('Content-Type', 'application/json')
         data = {'from': messageProtocolEntity.getFrom(False), 'message':  messageProtocolEntity.getBody() }
         response = urllib2.urlopen(req, json.dumps(data))
-        logging.info("response %s"%response)
+        logging.info("response %s"%response.read())
     except Exception,e:
         logging.error("Error: %s"%e)
 
