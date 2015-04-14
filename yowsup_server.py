@@ -12,7 +12,7 @@ import json
 import urllib2
 
 def post_message_to_url(messageProtocolEntity, reply_url):
-    logging.info("posting message to %s"%reply_url)
+    logging.info("Posting message to %s"%reply_url)
     try:
         req = urllib2.Request(reply_url)
         req.add_header('Content-Type', 'application/json')
