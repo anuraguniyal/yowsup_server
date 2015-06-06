@@ -39,7 +39,10 @@ def query_api_ai(messageProtocolEntity, reply_url):
     response = urllib2.urlopen(req).read()
     response = json.loads(response)
     logging.debug(response)
-    return response['result']['fulfillment']['speech']
+    result = response['result']['fulfillment']['speech']
+    if not result:
+        result = "didn't understand that, sorry!"
+    return result
 
 def generic_reply_url_handler(messageProtocolEntity, reply_url):
     req = urllib2.Request(reply_url)
