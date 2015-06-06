@@ -1,4 +1,5 @@
 import sys
+import os
 
 from yowsup.layers.auth                        import YowAuthenticationProtocolLayer
 from yowsup.layers.protocol_messages           import YowMessagesProtocolLayer
@@ -109,18 +110,18 @@ class AppPinger(threading.Thread):
 
 if __name__==  "__main__":
     logging.info("command args %s"%sys.argv)
-    phone = sys.argv[1]
-    password = sys.argv[2]
-    port = int(sys.argv[3])
-    encryption = sys.argv[4]=='1'
+    phone = os.environ['WAPP_PHONE']
+    password = os.environ['WAPP_PASS']
+    port = int(sys.argv[1])
+    encryption = os.environ['WAPP_ENCRYPTION']=='1'
     try:
-        app_name = sys.argv[5]
-    except IndexError,e:
+        app_name = os.environ['APP_NAME']
+    except KeyError,e:
         app_name = None
 
     try:
-        reply_url = sys.argv[6]
-    except IndexError,e:
+        reply_url = os.environ['WAPP_REPLY_URL']
+    except KeyError,e:
         reply_url = None
 
     global stack

@@ -10,22 +10,49 @@ import threading
 import fortune
 import json
 import urllib2
+import urllib
+from urlparse import urlparse, parse_qs
 
-def post_message_to_url(messageProtocolEntity, reply_url):
+def handle_reply_url(messageProtocolEntity, reply_url):
     logging.info("Posting message to %s"%reply_url)
     try:
-        req = urllib2.Request(reply_url)
-        req.add_header('Content-Type', 'application/json')
-        data = {'from': messageProtocolEntity.getFrom(False), 'message':  messageProtocolEntity.getBody() }
-        response = urllib2.urlopen(req, json.dumps(data))
-        logging.info("response: %s"%response.read())
+        url = urlparse(reply_url)
+        if url.netloc.endswith('api.ai'):
+            return query_api_ai(messageProtocolEntity, reply_url)
+        else:
+            return generic_reply_url_handler(messageProtocolEntity, reply_url)
     except Exception,e:
-        logging.error("Error: %s"%e)
+        logging.error("Reply URL Error: %s"%e)
+
+def query_api_ai(messageProtocolEntity, reply_url):
+    url = urlparse(reply_url)
+    query_params = parse_qs(url.query)
+    client_key = query_params['client-key'][0]
+    subscription_key = query_params['subscription-key'][0]
+    data = {'lang': 'en', 'query':  messageProtocolEntity.getBody(), 'v': '20150512'}
+    api_url = "https://api.api.ai/v1/query?"+urllib.urlencode(data)
+    headers = {
+        'Authorization': 'Bearer '+client_key,
+        'ocp-apim-subscription-key': subscription_key
+    }
+    req = urllib2.Request(api_url, headers=headers)
+    response = urllib2.urlopen(req).read()
+    response = json.loads(response)
+    logging.debug(response)
+    return response['result']['fulfillment']['speech']
+
+def generic_reply_url_handler(messageProtocolEntity, reply_url):
+    req = urllib2.Request(reply_url)
+    req.add_header('Content-Type', 'application/json')
+    data = {'from': messageProtocolEntity.getFrom(False), 'message':  messageProtocolEntity.getBody() }
+    response = urllib2.urlopen(req, json.dumps(data))
+    logging.info("response: %s"%response.read())
+    return None # we don't want anything to be sent to user
 
 class ServerLayer(YowInterfaceLayer):
 
     PROP_MESSAGES = "org.openwhatsapp.yowsup.prop.messages.queue" #list of (jid, message) tuples
-    PROP_REPLY_URL = "org.openwhatsapp.yowsup.prop.reploy_url"
+    PROP_REPLY_URL = "org.openwhatsapp.yowsup.prop.reply_url"
     EVENT_SEND_MESSAGE             = "org.openwhatsapp.yowsup.event.cli.send_message"
 
     lock = threading.Condition()
@@ -55,12 +82,15 @@ class ServerLayer(YowInterfaceLayer):
             logging.warn("Message from myself, ignoring!!!")
             return
 
+        msg = None
         reply_url = self.getProp(self.__class__.PROP_REPLY_URL)
         if reply_url is not None:
-            post_message_to_url(messageProtocolEntity, reply_url)
-            return
+            msg = handle_reply_url(messageProtocolEntity, reply_url)
+            if msg is None:
+                return
 
-        msg = fortune.fortune()
+        if msg is None:
+            msg = fortune.fortune()
         logging.info("replying with: %s"%msg)
         outgoingMessageProtocolEntity = TextMessageProtocolEntity(
             msg,
@@ -78,7 +108,7 @@ class ServerLayer(YowInterfaceLayer):
 
     @ProtocolEntityCallback("receipt")
     def onReceipt(self, entity):
-        ack = OutgoingAckProtocolEntity(entity.getId(), "receipt", "delivery")
+        ack = OutgoingAckProtocolEntity(entity.getId(), "receipt", "delivery", entity.getFrom())
         self.toLower(ack)
 
     def onEvent(self, yowLayerEvent):
