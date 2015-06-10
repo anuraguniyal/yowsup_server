@@ -96,7 +96,7 @@ class ServerLayer(YowInterfaceLayer):
             msg = fortune.fortune()
         logging.info("replying with: %s"%msg)
         outgoingMessageProtocolEntity = TextMessageProtocolEntity(
-            msg,
+            msg.encode('utf-8'),
             to = messageProtocolEntity.getFrom())
 
         self.toLower(outgoingMessageProtocolEntity)
